@@ -1,1 +1,19 @@
-asdf
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: yumzibah-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: yumzibah.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: yumzibah
+            port:
+              number: 80
