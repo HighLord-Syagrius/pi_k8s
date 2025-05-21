@@ -1,19 +1,30 @@
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: v1
+kind: Service
 metadata:
-  name: yumzibah-ingress
-  namespace: default
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+  name: yumzibah
 spec:
-  rules:
-  - host: yumzibah.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: yumzibah
-            port:
-              number: 80
+  type: LoadBalancer
+  ports:
+    - port: 80
+  selector:
+    app: yumzibah
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yumzibah
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: yumzibah
+  template:
+    metadata:
+      labels:
+        app: yumzibah
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.17.3
+          ports:
+            - containerPort: 80
