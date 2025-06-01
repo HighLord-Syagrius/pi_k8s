@@ -12,7 +12,14 @@ echo " But we're doing it this way anyway because I want to."
 echo " " 
 echo " "
 
+if [ -z "$1" ]
+  then
+    echo "no argument supplied"
+    exit 1
+fi
+
 function doIt() {
-  kubectl exec --stdin --tty $(kubectl get pods --no-headers | head -n 1 | awk '{print $1}') -- /bin/bash
+  NAMEREGEX=$1
+  kubectl exec --stdin --tty $(kubectl get pods -A | awk "/$NAMEREGEX/ {print \$2}") -- /bin/bash
 }
-doIt
+doIt $1
