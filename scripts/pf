@@ -1,0 +1,58 @@
+pf() {
+  local regex="^yumzibah"
+  local namespace=""
+
+  # Parse flags
+  while getopts "n:r:" opt; do
+    case $opt in
+      n) namespace="$OPTARG" ;;
+      r) regex="$OPTARG" ;;
+      *) 
+        echo "Usage: pf [-n namespace] [-r regex]"
+        return 1
+        ;;
+    esac
+  done
+
+  # Use current namespace if not provided
+  if [ -z "$namespace" ]; then
+    namespace=$(kubectl config view --minify --output 'jsonpath={..namespace}')
+    namespace="${namespace:-default}"
+  fi
+
+  # Get matching pods in the specified namespace
+  mapfile -t pods < <(kubectl get pods -n "$namespace" | awk -v re="$regex" '$1 ~ re {print $1}')
+  
+  # If no pods found, exit
+  if [ ${#pods[@]} -eq 0 ]; then
+    echo "No matching pods found in namespace '$namespace' with pattern '$regex'."
+    return 1
+  fi
+
+  # If only one pod, skip selection
+  if [ ${#pods[@]} -eq 1 ]; then
+    selected_pod="${pods[0]}"
+    echo "Only one pod found: $selected_pod"
+  else
+    # Show numbered list
+    echo "Select a pod to port-forward from namespace '$namespace':"
+    for i in "${!pods[@]}"; do
+      printf "[%d] %s\n" $((i + 1)) "${pods[$i]}"
+    done
+
+    # Prompt for selection
+    read -p "Enter selection (1-${#pods[@]}): " choice
+
+    # Validate input
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt ${#pods[@]} ]; then
+      echo "Invalid selection."
+      return 1
+    fi
+
+    selected_pod="${pods[$((choice - 1))]}"
+  fi
+
+  # Run port-forward
+  echo "Port-forwarding pod: $selected_pod in namespace: $namespace"
+  kubectl port-forward -n "$namespace" "$selected_pod" 50005:50005
+}
